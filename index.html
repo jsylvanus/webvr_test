@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width" />
+        <title>WebVR Lessons 01</title>
+        <style type="text/css" media="screen">
+            html, body { border: none; padding: 0; margin: 0; display: block; }
+            .no-vr { display:none; }
+            #main-canvas { max-width: 100%; height: auto; } 
+        </style>
+    </head>
+    <body>
+        <canvas id="main-canvas"></canvas>
+        <button id="vr-mode" class="no-vr">Enter VR</button>
+
+        <script type="x-shader/x-vertex" id="vertex_shader">#version 300 es
+            in vec3 a_position;
+            in vec3 a_normal;
+
+            uniform mat4 u_projection;
+            uniform mat4 u_view;
+            uniform mat4 u_model;
+
+            out vec4 world_position;
+            out vec4 normal;
+
+            void main() {
+              world_position = u_model * vec4(a_position, 1);
+              gl_Position = u_projection * u_view * u_model * vec4(a_position, 1);
+              normal = normalize(u_model * vec4(a_normal, 0));
+            }
+        </script>
+    
+        <script type="x-shader/x-fragment" id="fragment_shader">#version 300 es
+            precision mediump float;
+
+            in vec4 world_position;
+            in vec4 normal;
+
+            uniform vec4 u_color;
+            uniform vec4 u_globallight_dir;
+            uniform vec4 u_globallight_color;
+            uniform vec3 u_camera_position;
+            uniform float u_ambient;
+
+            out vec4 color;
+
+            void main() {
+                vec4 lightDir = -normalize(u_globallight_dir);
+                vec4 viewDir = normalize(vec4(u_camera_position, 1) - world_position);
+                vec4 halfDir = normalize(lightDir + viewDir);
+                float specAngle = max(dot(halfDir, normal), 0.0);
+                float lambert = max(dot(lightDir, normal), 0.0);
+
+                float specular = pow(specAngle, 20.0);
+                vec4 colorLinear = 
+                    (u_ambient * u_globallight_color) +
+                    u_color * lambert +
+                    u_globallight_color * specular;
+                vec4 colorGammaCorrect = pow(colorLinear, vec4(1.0/1.0));
+                colorGammaCorrect.a = 1.0;
+                color = colorGammaCorrect;
+            }
+        </script>
+
+        <script src="gl-matrix.js"></script>
+        <script type="module" src="app.js"></script>
+    </body>
+</html>
